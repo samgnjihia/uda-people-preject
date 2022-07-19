@@ -117,7 +117,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys:[frontend build]
+          keys:[frontend-build]
       - run:
           name: Analyse frontend
           command: |
@@ -131,7 +131,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys:[backend build]
+          keys:[backend-build]
       - run:
           name: Analyse backend
           command: |
