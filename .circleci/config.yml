@@ -58,12 +58,11 @@ jobs:
             cd frontend
             npm install
             npm run build
-            exit 1
           
-      # - save_cache:
-      #     paths: [frontend/node_modules]
-      #     key: frontend-build
-      - notify_on_failure
+      - save_cache:
+          paths: [frontend/node_modules]
+          key: frontend-build
+      # - notify_on_failure
 
   build-backend:
     docker:
