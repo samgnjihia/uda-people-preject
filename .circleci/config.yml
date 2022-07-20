@@ -1,12 +1,7 @@
 version: 2.1
 
-orbs:
-    slack: circleci/slack@4.9.3
-
-parameters:
-  workflow_id:
-    type: string
-    default: '${CIRCLE_WORKFLOW_ID:0:7}'
+orbs: 
+  slack: circleci/slack@4.10.1
 
 
 commands:
@@ -16,6 +11,7 @@ commands:
               event: fail
               channel: cicd-pipeline
               template: basic_fail_1
+              
 #   destroy-environment:
 #     description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
 #     parameters:
@@ -63,10 +59,11 @@ jobs:
             npm install
             npm run build
             exit 1
+          
       - save_cache:
           paths: [frontend/node_modules]
           key: frontend-build
-      # - notify_on_failure
+      - notify_on_failure
 
   build-backend:
     docker:
@@ -167,10 +164,7 @@ jobs:
             npm audit fix --audit-level=critical --force
             npm audit fix --audit-level=critical --force
             npm audit --audit-level=critical
-            exit 1
-      - slack/notify:
-          event: fail
-          template: basic_fail_1
+
       # - notify_on_failure
       
 
@@ -340,14 +334,14 @@ jobs:
 #               # your code here
 #             fi
             
-  # notify_on_success:
-  #     docker:
-  #       - image: cimg/base:stable
-  #     steps:
-  #       - slack/notify:
-  #           event: pass
-  #           channel: cicd-pipeline
-  #           template: success_tagged_deploynment_1
+  notify_on_success:
+      docker:
+        - image: cimg/base:stable
+      steps:
+        - slack/notify:
+            event: pass
+            channel: cicd-pipeline
+            template: success_tagged_deploynment_1
 
 
 workflows:
@@ -363,12 +357,12 @@ workflows:
           requires: [build-backend]
       - scan-frontend:
           requires: [build-frontend]
-      # - notify_on_success:
-      #     requires:
-      #       - test-frontend
-      #       - test-backend
-      #       - scan-frontend
-      #       - scan-backend
+      - notify_on_success:
+          requires:
+            - test-frontend
+            - test-backend
+            - scan-frontend
+            - scan-backend
       # - deploy-infrastructure:
       #     requires: [test-frontend, test-backend, scan-frontend, scan-backend]
       #     filters:
