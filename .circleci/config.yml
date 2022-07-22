@@ -104,7 +104,7 @@ jobs:
       - save_cache:
           paths: [frontend/node_modules]
           key: frontend-test
-      # - notify_on_failure
+      - notify_on_failure
       
                 
   test-backend:
