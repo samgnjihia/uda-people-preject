@@ -246,7 +246,7 @@ jobs:
             apk add --update --no-cache tar gzip ansible aws-cli
       - attach_workspace:
           at: ~/
-      install_ansible
+      - install_ansible
       - run:
           name: Configure server
           command: |
