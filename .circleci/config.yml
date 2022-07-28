@@ -335,7 +335,7 @@ jobs:
       - image: cimg/base:stable
     steps:
       - checkout
-        - add_ssh_keys:
+      - add_ssh_keys:
           fingerprints: ["f5:9a:91:f5:a2:06:c2:ab:18:0e:6a:1f:f9:e6:76:1e"]
       - attach_workspace:
           at: ~/
