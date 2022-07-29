@@ -444,14 +444,14 @@ cloudfront-update:
 #               # your code here
 #             fi
             
-  notify_on_success:
-      docker:
-        - image: cimg/base:stable
-      steps:
-        - slack/notify:
-            event: pass
-            channel: cicd-pipeline
-            template: success_tagged_deploynment_1
+notify_on_success:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - slack/notify:
+          event: pass
+          channel: cicd-pipeline
+          template: success_tagged_deploynment_1
 
 
 workflows:
