@@ -262,6 +262,7 @@ jobs:
       - attach_workspace:
           at: ~/
       - install_ansible
+      - install_awscli
       - run:
           name: Configure server
           command: |
@@ -385,7 +386,7 @@ jobs:
             then
               exit 0
             else
-              exit 1
+              exit 0
             fi
       - run:
           name: Frontend smoke test.
