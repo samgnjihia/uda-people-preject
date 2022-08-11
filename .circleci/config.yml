@@ -3,10 +3,10 @@ version: 2.1
 orbs: 
   slack: circleci/slack@4.1
 
-# parameters:
-#   workflow_id:
-#     type: string
-#     default: '${CIRCLE_WORKFLOW_ID:0:7}'
+parameters:
+  workflow_id:
+    type: string
+    default: '${CIRCLE_WORKFLOW_ID:0:7}'
 
 commands:
   install_nodejs:
@@ -237,12 +237,12 @@ jobs:
             cat inventory.txt
             aws ec2 describe-instances \
             --query 'Reservations[*].Instances[*].PublicIpAddress' \
-            --output text --filter Name=tag:Name,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7} >> inventory.txt
+            --output text >> inventory.txt
             cat inventory.txt
 
             # echo $(aws ec2 describe-instances \
             # --query 'Reservations[*].Instances[*].PublicIpAddress' \
-            # --filters Name=tag:aws:cloudformation:stack-name,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7} \
+            # # --filters Name=tag:aws:cloudformation:stack-name,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7} \
             # --output text) >> ~/project/.circleci/ansible/inventory.txt
                
       - persist_to_workspace:
@@ -330,69 +330,38 @@ jobs:
             aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
       - destroy-environment
       - revert-migrations   
+                    
   deploy-backend:
     docker:
-      - image: python:3.7-alpine3.11
+      - image: cimg/base:stable
     steps:
-      - checkout 
-      - add_ssh_keys: 
-          fingerprints: ["87:ad:56:da:6a:94:b9:cb:39:58:25:dc:20:ab:d8:43"]
+      - checkout
+      - add_ssh_keys:
+          fingerprints: ["f5:9a:91:f5:a2:06:c2:ab:18:0e:6a:1f:f9:e6:76:1e"]
       - attach_workspace:
-          at: .
-      - run: 
-          name: View content of inventory.txt
-          command: cat .circleci/ansible/inventory.txt 
-      - run:
-          name: Install dependencies
-          command: |
-            apk add --update ansible curl rsync openssh nodejs npm
-            ansible --version
-            pip install awscli
-            aws --version
+          at: ~/
+      - install_nodejs
+      - install_awscli
+      - install_ansible
+     
       - run:
           name: Deploy backend
           command: |
             cd backend
+
             npm i
             npm run build
             cd ..
-            tar -C backend -czvf artifact.tar.gz .
+
             cd .circleci/ansible
-            echo "Contents  of the inventory.txt file is -------"
+            mkdir files
+            cd files
+            tar -C ../../../backend -czvf artifact.tar.gz .
+            cd ../
+
+            echo "Contents of the inventory.txt file is  ..."
             cat inventory.txt
-            ansible-playbook -i inventory.txt deploy-backend.yml -vv  
-                    
-  # deploy-backend:
-  #   docker:
-  #     - image: cimg/base:stable
-  #   steps:
-  #     - checkout
-  #     - add_ssh_keys:
-  #         fingerprints: ["f5:9a:91:f5:a2:06:c2:ab:18:0e:6a:1f:f9:e6:76:1e"]
-  #     - attach_workspace:
-  #         at: ~/
-  #     - install_nodejs
-  #     - install_awscli
-  #     - install_ansible
-     
-  #     - run:
-  #         name: Deploy backend
-  #         command: |
-  #           cd backend
-
-  #           npm i
-  #           npm run build
-  #           cd ..
-
-  #           cd .circleci/ansible
-  #           mkdir files
-  #           cd files
-  #           tar -C ../../../backend -czvf artifact.tar.gz .
-  #           cd ../
-
-  #           echo "Contents of the inventory.txt file is  ..."
-  #           cat inventory.txt
-  #           ansible-playbook -i inventory.txt deploy-backend.yml
+            ansible-playbook -i inventory.txt deploy-backend.yml
       - destroy-environment
       - revert-migrations 
 
