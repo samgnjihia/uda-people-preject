@@ -329,39 +329,70 @@ jobs:
             npm run build
             aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
       - destroy-environment
-      - revert-migrations    
-                    
+      - revert-migrations   
   deploy-backend:
     docker:
-      - image: cimg/base:stable
+      - image: python:3.7-alpine3.11
     steps:
-      - checkout
-      - add_ssh_keys:
-          fingerprints: ["f5:9a:91:f5:a2:06:c2:ab:18:0e:6a:1f:f9:e6:76:1e"]
+      - checkout 
+      - add_ssh_keys: 
+          fingerprints: ["87:ad:56:da:6a:94:b9:cb:39:58:25:dc:20:ab:d8:43"]
       - attach_workspace:
-          at: ~/
-      - install_nodejs
-      - install_awscli
-      - install_ansible
-     
+          at: .
+      - run: 
+          name: View content of inventory.txt
+          command: cat .circleci/ansible/inventory.txt 
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --update ansible curl rsync openssh nodejs npm
+            ansible --version
+            pip install awscli
+            aws --version
       - run:
           name: Deploy backend
           command: |
             cd backend
-
             npm i
             npm run build
             cd ..
-
+            tar -C backend -czvf artifact.tar.gz .
             cd .circleci/ansible
-            mkdir files
-            cd files
-            tar -C ../../../backend -czvf artifact.tar.gz .
-            cd ../
-
-            echo "Contents of the inventory.txt file is  ..."
+            echo "Contents  of the inventory.txt file is -------"
             cat inventory.txt
-            ansible-playbook -i inventory.txt deploy-backend.yml
+            ansible-playbook -i inventory.txt deploy-backend.yml -vv  
+                    
+  # deploy-backend:
+  #   docker:
+  #     - image: cimg/base:stable
+  #   steps:
+  #     - checkout
+  #     - add_ssh_keys:
+  #         fingerprints: ["f5:9a:91:f5:a2:06:c2:ab:18:0e:6a:1f:f9:e6:76:1e"]
+  #     - attach_workspace:
+  #         at: ~/
+  #     - install_nodejs
+  #     - install_awscli
+  #     - install_ansible
+     
+  #     - run:
+  #         name: Deploy backend
+  #         command: |
+  #           cd backend
+
+  #           npm i
+  #           npm run build
+  #           cd ..
+
+  #           cd .circleci/ansible
+  #           mkdir files
+  #           cd files
+  #           tar -C ../../../backend -czvf artifact.tar.gz .
+  #           cd ../
+
+  #           echo "Contents of the inventory.txt file is  ..."
+  #           cat inventory.txt
+  #           ansible-playbook -i inventory.txt deploy-backend.yml
       - destroy-environment
       - revert-migrations 
 
