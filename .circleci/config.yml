@@ -40,7 +40,7 @@ commands:
     parameters:
       workflow_id:
         type: string
-        default: ${CIRCLE_WORKFLOW_ID}  
+        # default: ${CIRCLE_WORKFLOW_ID}  
     steps:
       - run:
           name: Destroy environments
@@ -207,6 +207,8 @@ jobs:
             npm audit --audit-level=critical
 
       # - notify_on_failure
+  # 
+    
   # deploy-infrastructure:
   #   docker:
   #     - image: amazon/aws-cli
@@ -218,31 +220,34 @@ jobs:
   #         command: |
   #           aws cloudformation deploy \
   #             --template-file .circleci/files/backend.yml \
-  #             --tags project=udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7} \
+  #             --tags project=your-tag \
   #             --stack-name udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7} \
-  #             --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}" 
+  #             --parameter-overrides ID=${CIRCLE_WORKFLOW_ID:0:7} 
   #     - run:
   #         name: Ensure front-end infrastructure exist
   #         command: |
   #           aws cloudformation deploy \
   #             --template-file .circleci/files/frontend.yml \
-  #             --tags project=udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7} \
+  #             --tags project=your-tag \
   #             --stack-name udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7} \
-  #             --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}" 
+  #             --parameter-overrides ID=${CIRCLE_WORKFLOW_ID:0:7} 
   #     - run:
   #         name: Add back-end ip to ansible inventory
   #         command: |
+  #           cd .circleci/ansible
+  #           cat inventory.txt
   #           aws ec2 describe-instances \
-  #             --query 'Reservations[*].Instances[*].PublicIpAddress' \
-  #             --filters "Name=tag:project,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-  #             --output text >> .circleci/ansible/inventory.txt
+  #           --query 'Reservations[*].Instances[*].PublicIpAddress' \
+  #           --output text --filter Name=tag:project,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7} >> inventory.txt
+  #           cat inventory.txt
+               
   #     - persist_to_workspace:
-  #         root: .
+  #         root: ~/
   #         paths:
-  #           - .circleci/ansible/*
+  #           - project/.circleci/ansible/inventory.txt
   #     - destroy-environment:
   #         workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}    
-    
+
   deploy-infrastructure:
     docker:
       - image: amazon/aws-cli
@@ -256,7 +261,7 @@ jobs:
               --template-file .circleci/files/backend.yml \
               --tags project=your-tag \
               --stack-name udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7} \
-              --parameter-overrides ID=${CIRCLE_WORKFLOW_ID:0:7} 
+              --parameter-overrides ID=${CIRCLE_WORKFLOW_ID:0:7}
       - run:
           name: Ensure front-end infrastructure exist
           command: |
@@ -264,43 +269,78 @@ jobs:
               --template-file .circleci/files/frontend.yml \
               --tags project=your-tag \
               --stack-name udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7} \
-              --parameter-overrides ID=${CIRCLE_WORKFLOW_ID:0:7} 
+              --parameter-overrides ID=${CIRCLE_WORKFLOW_ID:0:7}
       - run:
           name: Add back-end ip to ansible inventory
           command: |
-            cd .circleci/ansible
-            cat inventory.txt
-            aws ec2 describe-instances \
+            echo $(aws ec2 describe-instances \
             --query 'Reservations[*].Instances[*].PublicIpAddress' \
-            --output text --filter Name=tag:project,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7} >> inventory.txt
-            cat inventory.txt
-               
+            --filters Name=tag:aws:cloudformation:stack-name,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7} \
+            --output text) >> ~/project/.circleci/ansible/inventory.txt
       - persist_to_workspace:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
       - destroy-environment:
-          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}    
+          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
+
   configure-infrastructure:
     docker:
-      - image: cimg/base:stable
+      - image: python:3.7-alpine3.16
     steps:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - 'f5:9a:91:f5:a2:06:c2:ab:18:0e:6a:1f:f9:e6:76:1e'    
+            - 'f5:9a:91:f5:a2:06:c2:ab:18:0e:6a:1f:f9:e6:76:1e'
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --update --no-cache tar gzip ansible aws-cli
       - attach_workspace:
           at: ~/
-      - install_ansible
-      - install_awscli
       - run:
           name: Configure server
           command: |
-             cd .circleci/ansible
-             cat inventory.txt
-            #  ansible-playbook -i inventory.txt configure-server.yml
+            # add environment variables to server
+            echo ENVIRONMENT=production > backend/.env
+            echo TYPEORM_CONNECTION=$TYPEORM_CONNECTION >> backend/.env
+            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> backend/.env
+            echo TYPEORM_ENTITIES=$TYPEORM_ENTITIES >> backend/.env
+            echo TYPEORM_HOST=$TYPEORM_HOST >> backend/.env
+            echo TYPEORM_MIGRATIONS=$TYPEORM_MIGRATIONS >> backend/.env
+            echo TYPEORM_MIGRATIONS_DIR=$TYPEORM_MIGRATIONS_DIR >> backend/.env
+            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> backend/.env
+            echo TYPEORM_PORT=$TYPEORM_PORT >> backend/.env
+            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> backend/.env
+            cat backend/.env
+            cd .circleci/ansible
+            ansible-playbook -i inventory.txt configure-server.yml
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - project/backend
       - destroy-environment:
           workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
+  # configure-infrastructure:
+  #   docker:
+  #     - image: cimg/base:stable
+  #   steps:
+  #     - checkout
+  #     - add_ssh_keys:
+  #         fingerprints:
+  #           - 'f5:9a:91:f5:a2:06:c2:ab:18:0e:6a:1f:f9:e6:76:1e'    
+  #     - attach_workspace:
+  #         at: ~/
+  #     - install_ansible
+  #     - install_awscli
+  #     - run:
+  #         name: Configure server
+  #         command: |
+  #            cd .circleci/ansible
+  #            cat inventory.txt
+  #           #  ansible-playbook -i inventory.txt configure-server.yml
+  #     - destroy-environment:
+  #         workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
 
   run-migrations:
     docker:
@@ -504,36 +544,36 @@ workflows:
     jobs:
       - build-frontend
       - build-backend
-      - test-frontend:
-          requires: [build-frontend]
-      - test-backend:
-          requires: [build-backend]
-      - scan-backend:
-          requires: [build-backend]
-      - scan-frontend:
-          requires: [build-frontend]
+      # - test-frontend:
+      #     requires: [build-frontend]
+      # - test-backend:
+      #     requires: [build-backend]
+      # - scan-backend:
+      #     requires: [build-backend]
+      # - scan-frontend:
+      #     requires: [build-frontend]
       # - notify_on_success:
       #     requires:
       #       - test-frontend
       #       - test-backend
       #       - scan-frontend
       #       - scan-backend
-      - deploy-infrastructure:
-          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
-          filters:
-            branches:
-              only: [master]
-      - configure-infrastructure:
-          requires: [deploy-infrastructure]
-      - run-migrations:
-          requires: [configure-infrastructure]
-      - deploy-frontend:
-          requires: [run-migrations]
-      - deploy-backend:
-          requires: [run-migrations]
-      - smoke-test:
-          requires: [deploy-backend, deploy-frontend]
-      - cloudfront-update:
-          requires: [smoke-test]
-      - cleanup:
-          requires: [cloudfront-update]
+      - deploy-infrastructure
+      #     requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+      #     filters:
+      #       branches:
+      #         only: [master]
+      # - configure-infrastructure:
+      #     requires: [deploy-infrastructure]
+      # - run-migrations:
+      #     requires: [configure-infrastructure]
+      # - deploy-frontend:
+      #     requires: [run-migrations]
+      # - deploy-backend:
+      #     requires: [run-migrations]
+      # - smoke-test:
+      #     requires: [deploy-backend, deploy-frontend]
+      # - cloudfront-update:
+      #     requires: [smoke-test]
+      # - cleanup:
+      #     requires: [cloudfront-update]
