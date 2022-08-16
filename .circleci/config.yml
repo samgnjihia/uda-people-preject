@@ -434,6 +434,7 @@ jobs:
             fi
       # - destroy-environment
       # - revert-migrations
+      # test
 
   cloudfront-update:
     docker:
